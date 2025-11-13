@@ -1,87 +1,22 @@
-# Welcome to React Router!
+# React Router with i18next Example App
 
-A modern, production-ready template for building full-stack React applications using React Router.
+This repo is an example app using React Router with remix-i18next setup.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+The app showcase how to set remix-i18next to load the translations from an imported module, it has support for English and Spanish.
 
-## Features
-
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
+## How to run
 
 ```bash
 npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Then open your browser and go to [http://localhost:3000](http://localhost:3000)
 
-## Building for Production
+You can go to [/?lng=es](http://localhost:3000/?lng=es) to force it to load in Spanish or to [/?lng=en](http://localhost:3000/?lng=en) to force it to load in English. which is also the default.
 
-Create a production build:
+The application detects the locale on the `app/root.tsx`, then in `app/routes/_index.tsx` it uses a combination of `getFixedT` in the loader and `useTranslation` in the component to show the translations.
 
-```bash
-npm run build
-```
+All translation files are fetched from `/api/locales` resource route which let us easily customize the cache of the translation.
 
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+It also uses a React Router cookie object to store the user preferred locale, when the user clicks a button to change from English to Spanish or vice versa, it sets the cookie, if you remove the `?lng` in the URL it will keep the user preferred locale.
