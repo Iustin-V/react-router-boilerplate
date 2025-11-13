@@ -1,62 +1,43 @@
-import { PassThrough } from "node:stream";
-import type { EntryContext, RouterContextProvider } from "react-router";
-import { createReadableStreamFromReadable } from "@react-router/node";
-import { ServerRouter } from "react-router";
-import { isbot } from "isbot";
-import type { RenderToPipeableStreamOptions } from "react-dom/server";
-import { renderToPipeableStream } from "react-dom/server";
+import { handleRequest } from "@vercel/react-router/entry.server";
+import type { EntryContext } from "react-router";
+import { RouterContextProvider } from "react-router";
 import { I18nextProvider } from "react-i18next";
-import { getInstance } from "./middleware/i18next";
+import type { ReactNode } from "react";
+import {getInstance} from "~/middleware/i18next";
 
-export const streamTimeout = 5_000;
+function createRouterContext(): RouterContextProvider {
+  return new RouterContextProvider(new Map());
+}
 
-export default function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  entryContext: EntryContext,
-  routerContext: RouterContextProvider,
+export async function getLoadContext(existingContext?: RouterContextProvider) {
+  const routerContext = existingContext ?? createRouterContext();
+  const i18n = await getInstance(routerContext);
+  (routerContext as any).set("i18n", i18n);
+  return routerContext;
+}
+
+export default async function handleVercelRequest(
+    request: Request,
+    responseStatusCode: number,
+    responseHeaders: Headers,
+    entryContext: EntryContext,
+    routerContext?: RouterContextProvider,
 ) {
-  return new Promise((resolve, reject) => {
-    let shellRendered = false;
-    let userAgent = request.headers.get("user-agent");
+  const context = routerContext ?? createRouterContext();
+  const loadContext = await getLoadContext(context);
 
-    let readyOption: keyof RenderToPipeableStreamOptions =
-      (userAgent && isbot(userAgent)) || entryContext.isSpaMode
-        ? "onAllReady"
-        : "onShellReady";
+  const i18n = (loadContext as any).get("i18n");
 
-    let { pipe, abort } = renderToPipeableStream(
-      <I18nextProvider i18n={getInstance(routerContext)}>
-        <ServerRouter context={entryContext} url={request.url} />
-      </I18nextProvider>,
+  return handleRequest(
+      request,
+      responseStatusCode,
+      responseHeaders,
+      entryContext,
       {
-        [readyOption]() {
-          shellRendered = true;
-          let body = new PassThrough();
-          let stream = createReadableStreamFromReadable(body);
-
-          responseHeaders.set("Content-Type", "text/html");
-
-          resolve(
-            new Response(stream, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            }),
-          );
-
-          pipe(body);
-        },
-        onShellError(error: unknown) {
-          reject(error);
-        },
-        onError(error: unknown) {
-          responseStatusCode = 500;
-          if (shellRendered) console.error(error);
-        },
+        context: loadContext,
+        wrapWithApp: (children: ReactNode) => (
+            <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        ),
       },
-    );
-
-    setTimeout(abort, streamTimeout + 1000);
-  });
+  );
 }
